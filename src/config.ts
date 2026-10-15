@@ -1,4 +1,5 @@
 import { IANAZone } from "luxon";
+import { readFileSync } from "node:fs";
 import type { AppConfig } from "./types";
 
 function splitList(value: string | undefined): string[] {
@@ -21,7 +22,22 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const sourceTimezone =
     env.SOURCE_TIMEZONE?.trim() ||
     (username.toLowerCase() === "thsottiaux" ? "America/Los_Angeles" : undefined);
+  let bark: AppConfig["bark"];
+  if (env.BARK_CONFIG_PATH?.trim()) {
+    try {
+      const raw = JSON.parse(readFileSync(env.BARK_CONFIG_PATH.trim(), "utf8"));
+      if (typeof raw.server !== "string" || typeof raw.device_key !== "string" || !raw.device_key.trim())
+        throw new Error();
+      const url = new URL(raw.server);
+      if (url.protocol !== "https:" || url.username || url.password ||
+          url.pathname !== "/" || url.search || url.hash) throw new Error();
+      bark = { server: url.origin, deviceKey: raw.device_key };
+    } catch {
+      throw new Error("BARK_CONFIG_PATH must reference valid HTTPS Bark credentials; details withheld.");
+    }
+  }
   return {
+    bark,
     sourceProvider,
     timezone: env.TARGET_TIMEZONE?.trim() || "Asia/Shanghai",
     sourceTimezone,
@@ -121,9 +137,10 @@ export function validateConfig(
     !config.telegramChatIds.length &&
     !config.discordWebhookUrls.length &&
     !config.webhookUrls.length
+    && !config.bark
   ) {
     errors.push(
-      "Configure at least one notification channel (GitHub Actions summary, email, SMS, Telegram, Discord, or webhook).",
+      "Configure at least one notification channel (GitHub Actions summary, email, SMS, Telegram, Discord, webhook, or Bark).",
     );
   }
 

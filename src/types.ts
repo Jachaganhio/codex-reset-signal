@@ -15,9 +15,14 @@ export type XPost = {
   url: string;
   media: XMedia[];
   canonicalId?: string;
+  /** Same-author reply relationship, validated by the source adapter. */
+  replyToId?: string;
+  resetContext?: { id: string; text: string; url: string };
 };
 
 export type MatchRecord = {
+  replyToId?: XPost["replyToId"];
+  resetContext?: XPost["resetContext"];
   version: string;
   id: string;
   text: string;
@@ -95,6 +100,7 @@ export type PublicStatus = {
 };
 
 export type AppConfig = {
+  bark?: { server: string; deviceKey: string };
   sourceProvider: "fxembed" | "x";
   timezone: string;
   sourceTimezone?: string;

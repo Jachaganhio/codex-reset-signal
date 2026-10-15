@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, open, unlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { AppConfig, MatchRecord, MonitorState, XPost } from "./types";
-import { extractEvents } from "./events";
+import { extractPostEvents } from "./reply-events";
 import { containsKeyword } from "./matcher";
 import { createTargets, type NotificationTarget } from "./notifications";
 import { readState, writeState } from "./state";
@@ -13,7 +13,7 @@ import {
   writePublicStatus,
 } from "./public-status";
 
-const EVENT_PARSER_VERSION = 5;
+const EVENT_PARSER_VERSION = 6;
 
 type Dependencies = {
   source?: PostSource;
@@ -52,7 +52,7 @@ function detectedRecord(
 
 function eventsForPost(post: XPost, config: AppConfig): MatchRecord["events"] {
   return config.keyword.toLowerCase() === "reset"
-    ? extractEvents(post, config.sourceTimezone).filter(
+    ? extractPostEvents(post, config.sourceTimezone).filter(
         (event) => config.includeMentions || event.type !== "mention",
       )
     : containsKeyword(post.text, config.keyword)
@@ -98,6 +98,8 @@ function reprojectSavedMatches(state: MonitorState, config: AppConfig): void {
         createdAt: match.createdAt,
         url: match.url,
         media: match.media,
+        replyToId: match.replyToId,
+        resetContext: match.resetContext,
       };
       return { ...match, events: eventsForPost(post, config) };
     })

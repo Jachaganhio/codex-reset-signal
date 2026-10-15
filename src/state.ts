@@ -31,6 +31,12 @@ function migrateMatch(match: Record<string, unknown>): MatchRecord {
         ? match.version
         : `legacy:${id}:${createdAt ?? "unknown"}`,
     id,
+    ...(typeof match.replyToId === "string" ? { replyToId: match.replyToId } : {}),
+    ...(match.resetContext && typeof match.resetContext === "object" &&
+        typeof (match.resetContext as Record<string, unknown>).id === "string" &&
+        typeof (match.resetContext as Record<string, unknown>).text === "string" &&
+        typeof (match.resetContext as Record<string, unknown>).url === "string"
+      ? { resetContext: match.resetContext as XPost["resetContext"] } : {}),
     text: String(match.text ?? ""),
     createdAt,
     url: String(match.url ?? ""),

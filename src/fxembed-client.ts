@@ -45,6 +45,10 @@ function normalizePost(raw: JsonObject, username: string): XPost {
     createdAt: date.toISOString(),
     url: `https://x.com/${username}/status/${raw.id}`,
     media,
+    ...(object(raw.replying_to) && numericId(raw.replying_to.status) &&
+        typeof raw.replying_to.screen_name === "string" &&
+        raw.replying_to.screen_name.toLowerCase() === username.toLowerCase()
+      ? { replyToId: raw.replying_to.status } : {}),
   };
 }
 
@@ -95,6 +99,7 @@ export class FxEmbedClient implements PostSource {
     url.searchParams.set("count", "100");
     if (!options.excludeReplies) url.searchParams.set("with_replies", "1");
     const posts = new Map<string, XPost>();
+    const authoredContext = new Map<string, XPost>();
     const cursors = new Set<string>();
     let newestId: string | null = null;
     let latestObservedPost: XPost | null = null;
@@ -118,6 +123,7 @@ export class FxEmbedClient implements PostSource {
         // behind the durable cursor. This keeps source health visible without
         // rewinding sinceId or reprocessing historical posts.
         const post = normalizePost(raw, options.username);
+        authoredContext.set(post.id, post);
         if (!latestObservedPost || BigInt(post.id) > BigInt(latestObservedPost.id))
           latestObservedPost = post;
 
@@ -129,8 +135,14 @@ export class FxEmbedClient implements PostSource {
         BigInt(pageNewest) <= BigInt(options.sinceId);
       const next = body.cursor.bottom;
       // Return only after the batch is complete; runMonitor commits atomically.
-      if (options.bootstrap || reachedBoundary || !next)
+      if (options.bootstrap || reachedBoundary || !next) {
+        for (const post of posts.values()) {
+          const parent = post.replyToId ? authoredContext.get(post.replyToId) : undefined;
+          if (parent && /\breset(?:s|ting)?\b/i.test(parent.text))
+            post.resetContext = { id: parent.id, text: parent.text, url: parent.url };
+        }
         return { posts: [...posts.values()], newestId, latestObservedPost };
+      }
       if (cursors.has(next)) throw new Error("FxEmbed pagination repeated; cursor not advanced");
       cursors.add(next);
       url.searchParams.set("cursor", next);

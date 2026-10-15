@@ -1,0 +1,19 @@
+{
+  "code": 200,
+  "results": [
+    {
+      "type": "status", "id": "2110595484180214059",
+      "author": { "id": "1953337039510003712", "screen_name": "thsottiaux" },
+      "text": "The reports of my reset button being lost are greatly exaggerated\n\nDay 10/ Reset",
+      "created_timestamp": 1792040151, "media": {}
+    },
+    {
+      "type": "status", "id": "2110595554036400151",
+      "author": { "id": "1953337039510003712", "screen_name": "thsottiaux" },
+      "text": "Landing within the next 2 hours",
+      "created_timestamp": 1792040167, "media": {},
+      "replying_to": { "screen_name": "thsottiaux", "status": "2110595484180214059" }
+    }
+  ],
+  "cursor": { "top": null, "bottom": null }
+}

@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { loadConfig, validateConfig } from "./config";
-import { extractEvents } from "./events";
+import { extractPostEvents } from "./reply-events";
 import { renderText } from "./notifications";
 import { runMonitor } from "./monitor";
 import type { XPost } from "./types";
@@ -24,7 +24,7 @@ if (errors.length) {
   if (!path) throw new Error("--input requires a JSON file path");
   const posts = JSON.parse(await readFile(path, "utf8")) as XPost[];
   for (const post of posts) {
-    const events = extractEvents(post, config.sourceTimezone).filter(
+    const events = extractPostEvents(post, config.sourceTimezone).filter(
       (e) => config.includeMentions || e.type !== "mention",
     );
     if (events.length)
