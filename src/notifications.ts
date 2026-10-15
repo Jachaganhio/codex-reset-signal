@@ -42,6 +42,7 @@ export function renderText(
     ),
     "",
     post.text,
+    ...(post.resetContext ? ["", "关联的本人原帖：", post.resetContext.text, post.resetContext.url] : []),
     "",
     post.url,
   ].join("\n");
@@ -98,6 +99,26 @@ export function createTargets(
     if (!response.ok) throw new Error(`Notification HTTP ${response.status}`);
     return response;
   };
+  if (config.bark) {
+    const bark = config.bark;
+    add("bark", `${bark.server}:${bark.deviceKey}`, async (item) => {
+      const response = await request(`${bark.server}/push`, {
+        device_key: bark.deviceKey,
+        title: `Tibo · ${item.events.map(e => `${labels[e.type]} · ${statuses[e.status]}`).join(" / ")}`,
+        body: [(item.post.createdAt ? `原帖发布时间：${item.post.createdAt}` : ""),
+          ...(item.post.createdAt && Date.now()-Date.parse(item.post.createdAt)>600_000
+            ? ["延迟提醒：这是补发或延迟发现的消息，不是刚刚发布。"] : []),
+          renderText(item.post, item.events, config.timezone)].filter(Boolean).join("\n\n").slice(0,10000),
+        url: item.post.url, group: "Tibo 额度提醒", isArchive: "1", level: "active",
+      });
+      try {
+        const result = await response.json() as { code?: number };
+        if (result.code !== 200) throw new Error();
+      } catch {
+        throw new Error("Bark rejected notification or returned invalid JSON");
+      }
+    });
+  }
   if (config.githubSummaryPath)
     add("github-actions", "job-summary", async (item) => {
       const quoted = renderText(item.post, item.events, config.timezone)
