@@ -105,7 +105,10 @@ export function createTargets(
       const response = await request(`${bark.server}/push`, {
         device_key: bark.deviceKey,
         title: `Tibo · ${item.events.map(e => `${labels[e.type]} · ${statuses[e.status]}`).join(" / ")}`,
-        body: renderText(item.post, item.events, config.timezone).slice(0, 10000),
+        body: [(item.post.createdAt ? `原帖发布时间：${item.post.createdAt}` : ""),
+          ...(item.post.createdAt && Date.now()-Date.parse(item.post.createdAt)>600_000
+            ? ["延迟提醒：这是补发或延迟发现的消息，不是刚刚发布。"] : []),
+          renderText(item.post, item.events, config.timezone)].filter(Boolean).join("\n\n").slice(0,10000),
         url: item.post.url, group: "Tibo 额度提醒", isArchive: "1", level: "active",
       });
       try {
